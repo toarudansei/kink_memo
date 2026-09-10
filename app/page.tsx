@@ -1243,7 +1243,7 @@ export default function Home() {
   }
 
   const handleShareX = () => {
-    const text = encodeURIComponent('今日の調教課題をこなしました！ #性癖ボトル #調教課題')
+    const text = encodeURIComponent('課題達成しました！＃性癖メモ')
     const url = encodeURIComponent(window.location.origin)
     window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank')
   }
@@ -1838,7 +1838,7 @@ export default function Home() {
 
       <header className="flex justify-between items-center border-b pb-4 flex-wrap gap-3">
         <h1 className="text-xl sm:text-2xl font-bold">性癖メモ
-          
+
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
           {user ? (
