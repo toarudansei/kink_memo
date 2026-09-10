@@ -179,7 +179,7 @@ export default function Home() {
     extra_feature: 'サイコロ',
     dice_max: 6,
     feature_config_text: '1〜2：ノーパン\n3〜4：ノーブラ\n5〜6：ノーパンノーブラ',
-    categories: ['training'] as string[],
+    categories: [] as string[],
     topic_date: new Date().toISOString().split('T')[0],
     status: 'published'
   })
@@ -191,7 +191,7 @@ export default function Home() {
     extra_feature: 'ペナルティランダム罰',
     dice_max: 6,
     feature_config_text: 'ロープ拘束10分追加\n洗濯バサミ責め\n四つんばい放置\n追加お説教',
-    categories: ['training', 'bondage'] as string[],
+    categories: [] as string[],
     topic_date: new Date().toISOString().split('T')[0],
     status: 'published'
   })
@@ -1243,7 +1243,7 @@ export default function Home() {
   }
 
   const handleShareX = () => {
-    const text = encodeURIComponent('課題達成しました！＃性癖メモ')
+    const text = encodeURIComponent('課題達成しました！')
     const url = encodeURIComponent(window.location.origin)
     window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank')
   }
@@ -1837,9 +1837,7 @@ export default function Home() {
       )}
 
       <header className="flex justify-between items-center border-b pb-4 flex-wrap gap-3">
-        <h1 className="text-xl sm:text-2xl font-bold">性癖メモ
-
-        </h1>
+        <h1 className="text-xl sm:text-2xl font-bold">性癖メモ</h1>
         <div className="flex items-center gap-2 flex-wrap">
           {user ? (
             <>
