@@ -1837,7 +1837,9 @@ export default function Home() {
       )}
 
       <header className="flex justify-between items-center border-b pb-4 flex-wrap gap-3">
-        <h1 className="text-xl sm:text-2xl font-bold">性癖記録・調教課題アプリ</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">性癖メモ
+          
+        </h1>
         <div className="flex items-center gap-2 flex-wrap">
           {user ? (
             <>
