@@ -125,12 +125,10 @@ export default function Home() {
 
   const [showNumberKeypad, setShowNumberKeypad] = useState(false)
 
-  // 変更未保存検知用の初期値保持ステート
   const [initialProfileState, setInitialProfileState] = useState<any>(null)
   const [initialCustomValuesState, setInitialCustomValuesState] = useState<any>(null)
   const [isSettingsDirty, setIsSettingsDirty] = useState(false)
 
-  // PINロック用の状態
   const [appLockEnabled, setAppLockEnabled] = useState(false)
   const [appLockPin, setAppLockPin] = useState('')
   const [isLocked, setIsLocked] = useState(false)
@@ -189,6 +187,14 @@ export default function Home() {
   const [selectedMediaDetail, setSelectedMediaDetail] = useState<{ recordId: string; itemId: string; url: string; type: string; comment: string } | null>(null)
   const [selectedHistoryDriveData, setSelectedHistoryDriveData] = useState<any | null>(null)
   const [allSendHistory, setAllSendHistory] = useState<any[]>([])
+
+  // アクセス統計データ用のステート
+  const [siteStats, setSiteStats] = useState({
+    totalUsers: 0,
+    totalAnswers: 0,
+    totalMedia: 0,
+    totalChecks: 0,
+  })
 
   const [categoryPages, setCategoryPages] = useState<{ [parentId: string]: number }>({})
   const [exportingKey, setExportingKey] = useState<string | null>(null)
@@ -281,7 +287,6 @@ export default function Home() {
 
   const [answers, setAnswers] = useState<any[]>([])
 
-  // 変更検知（ダーティチェック）
   useEffect(() => {
     if (!initialProfileState || !initialCustomValuesState) return
     const isProfileChanged =
@@ -300,12 +305,10 @@ export default function Home() {
     setIsSettingsDirty(isProfileChanged || isCustomsChanged)
   }, [profile, customValues, customsGlobalEnabled, appLockEnabled, appLockPin, avatarFile, initialProfileState, initialCustomValuesState])
 
-  // タブ切り替え時の未保存チェック関数
   const handleTabChange = (nextTab: 'main' | 'list' | 'settings' | 'admin') => {
     if (activeTab === 'settings' && isSettingsDirty) {
       const confirmMove = window.confirm('設定の変更内容が保存されていません。このまま移動しますか？（変更は破棄されます）')
       if (!confirmMove) return
-      // 移動を受け入れた場合は初期状態に戻してダーティフラグを解除
       if (initialProfileState) {
         setProfile({
           username: initialProfileState.username,
@@ -459,6 +462,35 @@ export default function Home() {
 
     await fetchCategories()
   }
+
+  // アクセス・利用統計データを取得する関数
+  const fetchSiteStats = async () => {
+    if (!isAdmin) return
+    try {
+      const [profilesRes, answersRes, mediaRes, checksRes] = await Promise.all([
+        supabase.from('user_profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('topic_answers').select('*', { count: 'exact', head: true }),
+        supabase.from('user_item_media').select('*', { count: 'exact', head: true }),
+        supabase.from('user_checks').select('*', { count: 'exact', head: true }),
+      ])
+
+      setSiteStats({
+        totalUsers: profilesRes.count || 0,
+        totalAnswers: answersRes.count || 0,
+        totalMedia: mediaRes.count || 0,
+        totalChecks: checksRes.count || 0,
+      })
+    } catch (err) {
+      console.error('統計データ取得エラー:', err)
+    }
+  }
+
+  // 管理者タブを開いた際、または履歴更新時に統計も一緒に取得
+  useEffect(() => {
+    if (isAdmin && activeTab === 'admin') {
+      fetchSiteStats()
+    }
+  }, [isAdmin, activeTab])
 
   const handleCreateTopicAdmin = async (targetType: 'normal' | 'masochist') => {
     const formData = targetType === 'normal' ? adminFormNormal : adminFormMasochist
@@ -638,7 +670,6 @@ export default function Home() {
           setMasochistAgreed(true)
         }
         
-        // PINロック設定の読み込み
         const lockEnabled = !!data.custom_fields.appLockEnabled
         const pinVal = data.custom_fields.appLockPin || ''
         setAppLockEnabled(lockEnabled)
@@ -647,7 +678,6 @@ export default function Home() {
           setIsLocked(true)
         }
 
-        // 初期状態スナップショット保存
         setInitialProfileState({
           ...loadedProfile,
           customsGlobalEnabled: !!data.custom_fields.globalEnabled,
@@ -948,6 +978,7 @@ export default function Home() {
     }
 
     setAllSendHistory(historyList)
+    await fetchSiteStats()
   }
 
   const handleDeleteHistoryItem = async (historyItem: any) => {
@@ -1149,7 +1180,6 @@ export default function Home() {
       setAvatarPreview(null)
       setCustomImageFiles({})
       
-      // 保存成功時にスナップショットを更新してダーティフラグをOFFにする
       setInitialProfileState({
         ...updatedProfile,
         customsGlobalEnabled,
@@ -1683,7 +1713,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      {/* 起動時のPINロック画面（キーパッド入力） */}
       {isLocked && user && (
         <div className="fixed inset-0 z-50 bg-gray-900/95 flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white rounded-2xl p-6 max-w-xs w-full space-y-5 shadow-2xl text-center">
@@ -1786,7 +1815,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* 設定タブ等でのPIN新規設定・変更用キーパッドモーダル */}
       {showPinSetupModal && (
         <div
           onClick={() => {
@@ -2349,7 +2377,7 @@ export default function Home() {
                   onClick={() => handleTabChange('admin')}
                   className={`px-3 py-1.5 text-xs sm:text-sm rounded font-medium ${activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}
                 >
-                  📊 管理・ストック
+                  📊 管理・アクセス統計
                 </button>
               )}
               <button onClick={handleLogout} className="px-3 py-1.5 text-xs sm:text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded font-medium">
@@ -2407,7 +2435,6 @@ export default function Home() {
             </button>
           </div>
           <form onSubmit={handleSaveProfile} className="space-y-4 text-sm">
-            {/* アプリロック（PINコード）設定項目 */}
             <div className="p-4 border rounded-xl bg-indigo-50/50 space-y-3">
               <div className="flex justify-between items-center">
                 <div>
@@ -2998,15 +3025,43 @@ export default function Home() {
         <section className="border p-6 rounded-xl space-y-6 bg-white shadow-sm">
           <div className="flex justify-between items-center border-b pb-3 flex-wrap gap-3">
             <div>
-              <h2 className="text-lg font-bold text-indigo-600">📊 管理者用：個別お題投稿・詳細設定 ＆ 履歴管理</h2>
-              <p className="text-xs text-gray-500">スプレッドシート（CSVファイル）を直接アップロードして一括同期できます。</p>
+              <h2 className="text-lg font-bold text-indigo-600">📊 管理者用：アクセス統計 ＆ 履歴管理</h2>
+              <p className="text-xs text-gray-500">サイト全体の利用状況やユーザーからの提出データを一元管理できます。</p>
             </div>
             <button
-              onClick={fetchAllSendHistory}
-              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded font-medium"
+              onClick={() => {
+                fetchAllSendHistory()
+                fetchSiteStats()
+              }}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded font-medium flex items-center gap-1"
             >
-              🔄 履歴更新
+              🔄 統計・履歴更新
             </button>
+          </div>
+
+          {/* アクセス・利用統計ダッシュボード */}
+          <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-4 rounded-xl border border-indigo-100 space-y-3 shadow-xs">
+            <h3 className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
+              <span>📈</span> サイト全体の利用・アクセス統計サマリー
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white p-3 rounded-lg border shadow-2xs text-center">
+                <span className="text-[10px] text-gray-500 font-bold block">登録ユーザー数</span>
+                <span className="text-xl font-extrabold text-indigo-600">{siteStats.totalUsers} 名</span>
+              </div>
+              <div className="bg-white p-3 rounded-lg border shadow-2xs text-center">
+                <span className="text-[10px] text-gray-500 font-bold block">お題・課題 提出数</span>
+                <span className="text-xl font-extrabold text-purple-600">{siteStats.totalAnswers} 件</span>
+              </div>
+              <div className="bg-white p-3 rounded-lg border shadow-2xs text-center">
+                <span className="text-[10px] text-gray-500 font-bold block">アップロード写真・動画</span>
+                <span className="text-xl font-extrabold text-pink-600">{siteStats.totalMedia} 件</span>
+              </div>
+              <div className="bg-white p-3 rounded-lg border shadow-2xs text-center">
+                <span className="text-[10px] text-gray-500 font-bold block">性癖チェック総数</span>
+                <span className="text-xl font-extrabold text-emerald-600">{siteStats.totalChecks} 件</span>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
