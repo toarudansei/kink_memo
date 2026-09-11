@@ -533,7 +533,6 @@ export default function Home() {
       if (error) throw error
       alert(`${targetType === 'masochist' ? 'マゾ向け' : '一般向け'}お題を登録しました！`)
       
-      // 登録成功時にフォームの入力内容を自動でリセット
       if (targetType === 'normal') {
         setAdminFormNormal({
           title: '',
@@ -1447,15 +1446,33 @@ export default function Home() {
     if (!selectedHistoryDriveData) return
     const userNameSanitized = (selectedHistoryDriveData.profile?.username || 'user').replace(/[\/\\?%*:|"<>]/g, '_')
     const timeSanitized = selectedHistoryDriveData.sent_at.replace(/[\/\\?%*:|"<>:]/g, '-')
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedHistoryDriveData, null, 2))
+
+    // CSV形式に変換してスプレッドシートやExcelで開きやすくする
+    let csvRows = []
+    csvRows.push(['項目名', 'ステータス', 'コメント', 'メディアURL'].join(','))
+    
+    if (selectedHistoryDriveData.all_kinks) {
+      selectedHistoryDriveData.all_kinks.forEach((k: any) => {
+        const statusesStr = (k.statuses || []).join(' / ')
+        const commentsStr = (k.media_files || []).map((m: any) => m.comment).filter(Boolean).join(' | ')
+        const urlsStr = (k.media_files || []).map((m: any) => m.url).join(' | ')
+        csvRows.push([`"${k.title}"`, `"${statusesStr}"`, `"${commentsStr}"`, `"${urlsStr}"`].join(','))
+      })
+    }
+
+    const csvContent = "\uFEFF" + csvRows.join('\r\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+
     const downloadAnchor = document.createElement('a')
-    downloadAnchor.setAttribute("href", dataStr)
-    downloadAnchor.setAttribute("download", `kink_jar_send_history_${userNameSanitized}_${timeSanitized}.json`)
+    downloadAnchor.setAttribute("href", url)
+    downloadAnchor.setAttribute("download", `kink_jar_sheet_${userNameSanitized}_${timeSanitized}.csv`)
     document.body.appendChild(downloadAnchor)
     downloadAnchor.click()
     downloadAnchor.remove()
+
     setSelectedHistoryDriveData(null)
-    alert(`この送信データの保存が完了しました！`)
+    alert(`スプレッドシート用CSVファイルの保存が完了しました！ExcelやGoogleスプレッドシートでそのまま開けます。`)
   }
 
   const handleShareX = () => {
@@ -2062,7 +2079,7 @@ export default function Home() {
           >
             <div className="flex justify-between items-center border-b pb-2">
               <h3 className="text-sm font-bold text-indigo-900">
-                ☁️ 送信履歴データ保存（{selectedHistoryDriveData.profile?.username} / {new Date(selectedHistoryDriveData.sent_at).toLocaleString()}）
+                📊 スプレッドシート用CSV出力（{selectedHistoryDriveData.profile?.username || '名無し'} / {new Date(selectedHistoryDriveData.sent_at).toLocaleString()}）
               </h3>
               <button
                 onClick={() => setSelectedHistoryDriveData(null)}
@@ -2072,8 +2089,14 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="bg-gray-900 text-green-400 p-3 rounded-lg font-mono text-[11px] max-h-64 overflow-y-auto">
-              <pre>{JSON.stringify(selectedHistoryDriveData, null, 2)}</pre>
+            <p className="text-xs text-gray-600">
+              下のボタンを押すと、ExcelやGoogleスプレッドシートでそのままきれいに開ける<b>CSVファイル</b>形式でダウンロードできます。
+            </p>
+
+            <div className="bg-gray-50 p-4 rounded-lg border space-y-2 text-xs">
+              <p>👤 ユーザー名: <b>{selectedHistoryDriveData.profile?.username || '名無しさん'}</b></p>
+              <p>📅 提出日時: <b>{new Date(selectedHistoryDriveData.sent_at).toLocaleString()}</b></p>
+              <p>📋 記録項目数: <b>{selectedHistoryDriveData.all_kinks?.length || 0} 件</b></p>
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t">
@@ -2087,9 +2110,9 @@ export default function Home() {
               <button
                 type="button"
                 onClick={executeHistoryDriveSave}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5"
               >
-                💾 このデータを保存する
+                📥 スプレッドシート用CSVをダウンロード
               </button>
             </div>
           </div>
@@ -3548,40 +3571,132 @@ export default function Home() {
           </div>
 
           <div className="space-y-4 pt-4 border-t">
-            <h3 className="font-bold text-xs text-gray-800">ユーザーからの課題提出・送信履歴</h3>
+            <h3 className="font-bold text-xs text-gray-800">ユーザーからの課題提出・送信履歴（見やすいカード形式）</h3>
             {allSendHistory.length === 0 ? (
               <p className="text-gray-500 text-sm py-4 text-center">まだ提出履歴がありません。</p>
             ) : (
               <div className="space-y-4">
-                {allSendHistory.map((historyItem: any, idx: number) => (
-                  <div key={idx} className="border p-4 rounded-xl bg-gray-50/50 space-y-3 shadow-xs">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b pb-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded">提出 #${allSendHistory.length - idx}</span>
-                          <h3 className="font-bold text-sm text-gray-900">
-                            👤 {historyItem.profile?.username || '名無しさん'}
-                          </h3>
+                {allSendHistory.map((historyItem: any, idx: number) => {
+                  const answersList = historyItem.topic_answer ? [historyItem.topic_answer] : []
+                  const mediaList = historyItem.associated_media_list || []
+                  const profileData = historyItem.profile || {}
+                  const customValues = profileData.custom_fields?.values || {}
+
+                  return (
+                    <div key={idx} className="border p-4 rounded-xl bg-gradient-to-br from-white to-gray-50/60 space-y-4 shadow-sm">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 border flex items-center justify-center overflow-hidden shrink-0">
+                            {profileData.avatar_url ? (
+                              <img src={profileData.avatar_url} alt="アバター" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-xs font-bold text-indigo-700">👤</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="px-2 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded">提出 #${allSendHistory.length - idx}</span>
+                              <h3 className="font-bold text-sm text-gray-900">
+                                {profileData.username || '名無しさん'} {profileData.age ? `(${profileData.age}歳)` : ''}
+                              </h3>
+                            </div>
+                            <p className="text-[11px] text-gray-500 mt-0.5">提出日時: {new Date(historyItem.sent_at).toLocaleString()}</p>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-gray-500 mt-1">提出日時: {new Date(historyItem.sent_at).toLocaleString()}</p>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handlePrepareHistoryDriveSave(historyItem)}
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-1"
+                          >
+                            📊 スプレッドシート用CSV保存
+                          </button>
+                          <button
+                            onClick={() => handleDeleteHistoryItem(historyItem)}
+                            className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-lg shadow transition"
+                          >
+                            🗑️ 削除
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handlePrepareHistoryDriveSave(historyItem)}
-                          className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition"
-                        >
-                          ☁️ 保存
-                        </button>
-                        <button
-                          onClick={() => handleDeleteHistoryItem(historyItem)}
-                          className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-lg shadow transition"
-                        >
-                          🗑️ 削除
-                        </button>
-                      </div>
+
+                      {profileData.bio && (
+                        <div className="bg-indigo-50/40 p-2.5 rounded-lg border border-indigo-100 text-xs">
+                          <span className="font-bold text-indigo-900 block text-[10px]">自己紹介:</span>
+                          <p className="text-gray-700 whitespace-pre-line">{profileData.bio}</p>
+                        </div>
+                      )}
+
+                      {Object.keys(customValues).length > 0 && (
+                        <div className="bg-pink-50/40 p-3 rounded-lg border border-pink-100 space-y-2 text-xs">
+                          <span className="font-bold text-pink-950 block text-[10px]">🖤 マゾ向け・カスタム項目データ:</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {Object.entries(customValues).map(([k, v]: [string, any]) => {
+                              if (k.startsWith('img_')) return null
+                              const fieldConf = CUSTOM_FIELD_CONFIGS.find(f => f.id === k)
+                              const label = fieldConf ? fieldConf.label : k
+                              const displayVal = Array.isArray(v) ? v.join(', ') : String(v)
+
+                              return (
+                                <div key={k} className="bg-white p-2 rounded border border-pink-100">
+                                  <span className="text-[10px] text-gray-500 block font-semibold">{label}</span>
+                                  <span className="text-gray-900 font-medium text-xs">{displayVal}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {answersList.length > 0 && (
+                        <div className="space-y-2">
+                          <span className="font-bold text-xs text-gray-800 block">📝 課題への回答・報告コメント:</span>
+                          {answersList.map((ans: any, aIdx: number) => (
+                            <div key={aIdx} className="bg-white p-3 rounded-lg border space-y-2 text-xs">
+                              <p className="text-gray-800 whitespace-pre-line">{ans.content}</p>
+                              {ans.image_url && (
+                                <img
+                                  src={ans.image_url}
+                                  alt="提出画像"
+                                  onClick={() => setModalImageUrl(ans.image_url)}
+                                  className="w-24 h-24 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {mediaList.length > 0 && (
+                        <div className="space-y-2">
+                          <span className="font-bold text-xs text-gray-800 block">📁 アップロードされた証拠メディア ({mediaList.length}件):</span>
+                          <div className="flex flex-wrap gap-2.5">
+                            {mediaList.map((m: any, mIdx: number) => (
+                              <div key={mIdx} className="bg-white p-2 rounded-lg border flex items-center gap-3 shadow-2xs max-w-xs">
+                                {m.media_type === 'video' ? (
+                                  <video src={m.media_url} className="w-12 h-12 object-cover rounded border shrink-0" />
+                                ) : (
+                                  <img
+                                    src={m.media_url}
+                                    alt="メディア"
+                                    onClick={() => setModalImageUrl(m.media_url)}
+                                    className="w-12 h-12 object-cover rounded border shrink-0 cursor-pointer"
+                                  />
+                                )}
+                                <div className="overflow-hidden">
+                                  <span className="text-[10px] font-bold text-indigo-700 block">
+                                    項目ID: {itemsMap[m.item_id] || m.item_id}
+                                  </span>
+                                  <p className="text-[11px] text-gray-700 truncate">{m.comment || '（コメントなし）'}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
