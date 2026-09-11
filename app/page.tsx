@@ -125,6 +125,11 @@ export default function Home() {
 
   const [showNumberKeypad, setShowNumberKeypad] = useState(false)
 
+  // 変更未保存検知用の初期値保持ステート
+  const [initialProfileState, setInitialProfileState] = useState<any>(null)
+  const [initialCustomValuesState, setInitialCustomValuesState] = useState<any>(null)
+  const [isSettingsDirty, setIsSettingsDirty] = useState(false)
+
   // PINロック用の状態
   const [appLockEnabled, setAppLockEnabled] = useState(false)
   const [appLockPin, setAppLockPin] = useState('')
@@ -275,6 +280,51 @@ export default function Home() {
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false)
 
   const [answers, setAnswers] = useState<any[]>([])
+
+  // 変更検知（ダーティチェック）
+  useEffect(() => {
+    if (!initialProfileState || !initialCustomValuesState) return
+    const isProfileChanged =
+      profile.username !== initialProfileState.username ||
+      profile.bio !== initialProfileState.bio ||
+      profile.age !== initialProfileState.age ||
+      profile.send_mode !== initialProfileState.send_mode ||
+      avatarFile !== null
+
+    const isCustomsChanged =
+      JSON.stringify(customValues) !== JSON.stringify(initialCustomValuesState) ||
+      customsGlobalEnabled !== initialProfileState.customsGlobalEnabled ||
+      appLockEnabled !== initialProfileState.appLockEnabled ||
+      appLockPin !== initialProfileState.appLockPin
+
+    setIsSettingsDirty(isProfileChanged || isCustomsChanged)
+  }, [profile, customValues, customsGlobalEnabled, appLockEnabled, appLockPin, avatarFile, initialProfileState, initialCustomValuesState])
+
+  // タブ切り替え時の未保存チェック関数
+  const handleTabChange = (nextTab: 'main' | 'list' | 'settings' | 'admin') => {
+    if (activeTab === 'settings' && isSettingsDirty) {
+      const confirmMove = window.confirm('設定の変更内容が保存されていません。このまま移動しますか？（変更は破棄されます）')
+      if (!confirmMove) return
+      // 移動を受け入れた場合は初期状態に戻してダーティフラグを解除
+      if (initialProfileState) {
+        setProfile({
+          username: initialProfileState.username,
+          avatar_url: initialProfileState.avatar_url,
+          bio: initialProfileState.bio,
+          age: initialProfileState.age,
+          send_mode: initialProfileState.send_mode,
+        })
+        setCustomValues(initialCustomValuesState)
+        setCustomsGlobalEnabled(initialProfileState.customsGlobalEnabled)
+        setAppLockEnabled(initialProfileState.appLockEnabled)
+        setAppLockPin(initialProfileState.appLockPin)
+        setAvatarFile(null)
+        setAvatarPreview(null)
+      }
+      setIsSettingsDirty(false)
+    }
+    setActiveTab(nextTab)
+  }
 
   useEffect(() => {
     let interval: any = null
@@ -567,13 +617,15 @@ export default function Home() {
       .maybeSingle()
 
     if (data) {
-      setProfile({
+      const loadedProfile = {
         username: data.username || '',
         avatar_url: data.avatar_url || '',
         bio: data.bio || '',
         age: data.age != null ? String(data.age) : '',
         send_mode: data.send_mode || 'fake',
-      })
+      }
+      setProfile(loadedProfile)
+
       if (!data.has_seen_tutorial) {
         setShowTutorialModal(true)
       }
@@ -595,6 +647,15 @@ export default function Home() {
           setIsLocked(true)
         }
 
+        // 初期状態スナップショット保存
+        setInitialProfileState({
+          ...loadedProfile,
+          customsGlobalEnabled: !!data.custom_fields.globalEnabled,
+          appLockEnabled: lockEnabled,
+          appLockPin: pinVal,
+        })
+        setInitialCustomValuesState(JSON.parse(JSON.stringify(values)))
+
         const previews: { [key: string]: string[] } = {}
         Object.entries(values).forEach(([k, v]) => {
           if (k.startsWith('img_')) {
@@ -606,14 +667,26 @@ export default function Home() {
           }
         })
         setCustomImagePreviews(previews)
+      } else {
+        setInitialProfileState({
+          ...loadedProfile,
+          customsGlobalEnabled: false,
+          appLockEnabled: false,
+          appLockPin: '',
+        })
+        setInitialCustomValuesState({})
       }
     } else {
-      setProfile({ username: '', avatar_url: '', bio: '', age: '', send_mode: 'fake' })
+      const emptyProfile = { username: '', avatar_url: '', bio: '', age: '', send_mode: 'fake' }
+      setProfile(emptyProfile)
       setCustomValues({})
       setCustomsGlobalEnabled(false)
       setCustomImagePreviews({})
+      setInitialProfileState({ ...emptyProfile, customsGlobalEnabled: false, appLockEnabled: false, appLockPin: '' })
+      setInitialCustomValuesState({})
       setShowTutorialModal(true)
     }
+    setIsSettingsDirty(false)
   }
 
   const handleCompleteTutorial = async () => {
@@ -1069,11 +1142,23 @@ export default function Home() {
       console.error('プロフィール保存エラー:', error.message)
       alert(`保存に失敗しました: ${error.message}`)
     } else {
-      setProfile((prev) => ({ ...prev, avatar_url: finalAvatarUrl }))
+      const updatedProfile = { ...profile, avatar_url: finalAvatarUrl }
+      setProfile(updatedProfile)
       setCustomValues(newCustomValues)
       setAvatarFile(null)
       setAvatarPreview(null)
       setCustomImageFiles({})
+      
+      // 保存成功時にスナップショットを更新してダーティフラグをOFFにする
+      setInitialProfileState({
+        ...updatedProfile,
+        customsGlobalEnabled,
+        appLockEnabled,
+        appLockPin,
+      })
+      setInitialCustomValuesState(JSON.parse(JSON.stringify(newCustomValues)))
+      setIsSettingsDirty(false)
+
       alert('設定を保存しました')
     }
   }
@@ -1346,6 +1431,7 @@ export default function Home() {
     setAppLockPin('')
     setAnswers([])
     setIsLocked(false)
+    setIsSettingsDirty(false)
   }
 
   const parentCategories = categories.filter((c: any) => c.category_level === 1)
@@ -2238,29 +2324,29 @@ export default function Home() {
           {user ? (
             <>
               <button
-                onClick={() => setActiveTab('main')}
+                onClick={() => handleTabChange('main')}
                 className={`px-3 py-1.5 text-xs sm:text-sm rounded font-medium ${activeTab === 'main' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}
               >
                 メイン
               </button>
               <button
-                onClick={() => setActiveTab('list')}
+                onClick={() => handleTabChange('list')}
                 className={`px-3 py-1.5 text-xs sm:text-sm rounded font-medium ${activeTab === 'list' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}
               >
                 📋 性癖一覧
               </button>
               <button
-                onClick={() => setActiveTab('settings')}
-                className={`px-3 py-1.5 text-xs sm:text-sm rounded font-medium ${activeTab === 'settings' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                onClick={() => handleTabChange('settings')}
+                className={`px-3 py-1.5 text-xs sm:text-sm rounded font-medium relative ${activeTab === 'settings' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}
               >
                 設定
+                {isSettingsDirty && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" title="未保存の変更があります"></span>
+                )}
               </button>
               {isAdmin && (
                 <button
-                  onClick={() => {
-                    setActiveTab('admin')
-                    fetchAllSendHistory()
-                  }}
+                  onClick={() => handleTabChange('admin')}
                   className={`px-3 py-1.5 text-xs sm:text-sm rounded font-medium ${activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}
                 >
                   📊 管理・ストック
@@ -2295,7 +2381,21 @@ export default function Home() {
           </div>
         </section>
       ) : activeTab === 'settings' ? (
-        <section className="border p-6 rounded-xl space-y-6 bg-white shadow-sm">
+        <section className="border p-6 rounded-xl space-y-6 bg-white shadow-sm relative">
+          {isSettingsDirty && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-xs flex justify-between items-center">
+              <span>⚠️ 設定に未保存の変更があります。別のタブに移動する前に「設定を保存」を押してください。</span>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
+                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded shadow transition"
+              >
+                {savingProfile ? '保存中...' : '今すぐ保存'}
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-between items-center border-b pb-2">
             <h2 className="text-lg font-bold text-indigo-600">プロフィール設定</h2>
             <button
