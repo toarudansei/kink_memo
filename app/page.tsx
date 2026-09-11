@@ -1220,12 +1220,12 @@ export default function Home() {
                 image_url: mediaUrl || null,
               })
             }
-          } else if (newAnswer.trim()) {
+          } else if (newAnswer.trim() || selectedFile) {
             await supabase.from('topic_answers').insert({
               topic_id: activeCurrentPrompt.id,
               user_id: user.id,
               user_name: displayName,
-              content: newAnswer.trim(),
+              content: newAnswer.trim() || '（課題・メディア提出）',
               image_url: selectedFile ? await (async () => {
                 const fileExt = selectedFile.name.split('.').pop()
                 const filePath = `${user.id}/prompt_${Date.now()}.${fileExt}`
@@ -1242,7 +1242,7 @@ export default function Home() {
 
         setShowSendModal(false)
         setSendingToAdmin(false)
-        alert('課題の証拠写真と回答を正常に一括提出しました！')
+        alert('課題の証拠写真と回答を、マゾ向け項目や設定を含めて正常に一括提出しました！')
         setNewAnswer('')
         setSelectedFile(null)
         setPostPreview(null)
@@ -1257,7 +1257,7 @@ export default function Home() {
       
       setShowSendModal(false)
       setSendingToAdmin(false)
-      alert('課題を提出しました（送信演出モード）')
+      alert('課題を提出しました（送信演出モード - 追加した項目やマゾ向け設定も送信範囲に含まれました）')
       setNewAnswer('')
       setSelectedFile(null)
       setPostPreview(null)
@@ -1827,7 +1827,7 @@ export default function Home() {
               </label>
 
               <label className="flex items-center justify-between cursor-pointer font-semibold py-1">
-                <span>マゾ向け項目一式を含める</span>
+                <span>マゾ向け項目一式を含める（※設定タブで入力した内容も送信範囲になります）</span>
                 <input
                   type="checkbox"
                   checked={sendToggles.customs_all}
@@ -1929,11 +1929,11 @@ export default function Home() {
                                   <div className="p-2 space-y-2 border-t bg-white">
                                     {subCats.map((sub: any) => {
                                       const items = getChildItems(sub.id).filter((item: any) => {
-                                        if (!normalizedModalQuery) return true
+                                        if (!modalCategorySearch.trim()) return true
                                         return normalizeText(item.title).includes(normalizedModalQuery) || normalizeText(sub.title).includes(normalizedModalQuery)
                                       })
 
-                                      if (normalizedModalQuery && items.length === 0) return null
+                                      if (modalCategorySearch.trim() && items.length === 0) return null
 
                                       return (
                                         <div key={sub.id} className="space-y-1 pl-1">
@@ -2414,7 +2414,7 @@ export default function Home() {
               const matchedSubCategories = subCategories.map((sub: any) => {
                 const childItems = getChildItems(sub.id)
                 const filteredItems = childItems.filter((item: any) => {
-                  if (!listSearchQuery) return true
+                  if (!listSearchQuery.trim()) return true
                   return (
                     normalizeText(item.title).includes(normalizedListQuery) ||
                     normalizeText(sub.title).includes(normalizedListQuery) ||
@@ -2422,13 +2422,13 @@ export default function Home() {
                   )
                 })
                 return { sub, filteredItems }
-              }).filter((s) => s.filteredItems.length > 0 || (listSearchQuery && normalizeText(s.sub.title).includes(normalizedListQuery)))
+              }).filter((s) => s.filteredItems.length > 0 || (listSearchQuery.trim() && normalizeText(s.sub.title).includes(normalizedListQuery)))
 
-              const isParentMatched = listSearchQuery ? (matchedSubCategories.length > 0 || normalizeText(parent.title).includes(normalizedListQuery)) : true
+              const isParentMatched = listSearchQuery.trim() ? (matchedSubCategories.length > 0 || normalizeText(parent.title).includes(normalizedListQuery)) : true
 
-              if (listSearchQuery && !isParentMatched) return null
+              if (listSearchQuery.trim() && !isParentMatched) return null
 
-              const isOpen = listSearchQuery ? true : !!openCategories[parent.id]
+              const isOpen = listSearchQuery.trim() ? true : !!openCategories[parent.id]
 
               return (
                 <div key={parent.id} className="border rounded-lg overflow-hidden mb-4 shadow-sm">
@@ -2436,7 +2436,7 @@ export default function Home() {
                     onClick={() => toggleCategory(parent.id)}
                     className="w-full p-3 bg-gray-50 hover:bg-gray-100 flex justify-between items-center font-bold text-sm text-left transition"
                   >
-                    <span>📁 {parent.title} {listSearchQuery && <span className="text-xs text-indigo-600 font-normal">（ヒットあり）</span>}</span>
+                    <span>📁 {parent.title} {listSearchQuery.trim() && <span className="text-xs text-indigo-600 font-normal">（ヒットあり）</span>}</span>
                     <span className="text-xs text-gray-500">{isOpen ? '▲ 閉じる' : '▼ 開く'}</span>
                   </button>
 
@@ -2445,19 +2445,19 @@ export default function Home() {
                       {subCategories.map((sub: any) => {
                         const childItems = getChildItems(sub.id)
                         const filteredItems = childItems.filter((item: any) => {
-                          if (!listSearchQuery) return true
+                          if (!listSearchQuery.trim()) return true
                           return (
                             normalizeText(item.title).includes(normalizedListQuery) ||
                             normalizeText(sub.title).includes(normalizedListQuery)
                           )
                         })
 
-                        const isSubMatch = listSearchQuery && normalizeText(sub.title).includes(normalizedListQuery)
-                        const targetItems = isSubMatch && listSearchQuery ? childItems : filteredItems
+                        const isSubMatch = listSearchQuery.trim() && normalizeText(sub.title).includes(normalizedListQuery)
+                        const targetItems = isSubMatch && listSearchQuery.trim() ? childItems : filteredItems
 
-                        if (listSearchQuery && targetItems.length === 0) return null
+                        if (listSearchQuery.trim() && targetItems.length === 0) return null
 
-                        const isSubOpen = listSearchQuery ? true : (openSubCategories[sub.id] ?? true)
+                        const isSubOpen = listSearchQuery.trim() ? true : (openSubCategories[sub.id] ?? true)
                         
                         const isGearOrCostume = normalizeText(sub.title).includes('道具') || 
                                                 normalizeText(sub.title).includes('衣装') || 
