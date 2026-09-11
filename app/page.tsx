@@ -188,7 +188,6 @@ export default function Home() {
   const [selectedHistoryDriveData, setSelectedHistoryDriveData] = useState<any | null>(null)
   const [allSendHistory, setAllSendHistory] = useState<any[]>([])
 
-  // アクセス統計データ用のステート
   const [siteStats, setSiteStats] = useState({
     totalUsers: 0,
     totalAnswers: 0,
@@ -463,7 +462,6 @@ export default function Home() {
     await fetchCategories()
   }
 
-  // アクセス・利用統計データを取得する関数
   const fetchSiteStats = async () => {
     if (!isAdmin) return
     try {
@@ -485,7 +483,6 @@ export default function Home() {
     }
   }
 
-  // 管理者タブを開いた際、または履歴更新時に統計も一緒に取得
   useEffect(() => {
     if (isAdmin && activeTab === 'admin') {
       fetchSiteStats()
@@ -535,6 +532,34 @@ export default function Home() {
 
       if (error) throw error
       alert(`${targetType === 'masochist' ? 'マゾ向け' : '一般向け'}お題を登録しました！`)
+      
+      // 登録成功時にフォームの入力内容を自動でリセット
+      if (targetType === 'normal') {
+        setAdminFormNormal({
+          title: '',
+          description: '',
+          difficulty: 3,
+          extra_feature: 'サイコロ',
+          dice_max: 6,
+          feature_config_text: '1〜2：ノーパン\n3〜4：ノーブラ\n5〜6：ノーパンノーブラ',
+          categories: [],
+          topic_date: new Date().toISOString().split('T')[0],
+          status: 'published'
+        })
+      } else {
+        setAdminFormMasochist({
+          title: '',
+          description: '',
+          difficulty: 4,
+          extra_feature: 'ペナルティランダム罰',
+          dice_max: 6,
+          feature_config_text: 'ロープ拘束10分追加\n洗濯バサミ責め\n四つんばい放置\n追加お説教',
+          categories: [],
+          topic_date: new Date().toISOString().split('T')[0],
+          status: 'published'
+        })
+      }
+
       await fetchData()
     } catch (err: any) {
       alert(`登録に失敗しました: ${err.message || err}`)
@@ -3039,7 +3064,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* アクセス・利用統計ダッシュボード */}
           <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 p-4 rounded-xl border border-indigo-100 space-y-3 shadow-xs">
             <h3 className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
               <span>📈</span> サイト全体の利用・アクセス統計サマリー
