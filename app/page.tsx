@@ -3389,7 +3389,7 @@ export default function Home() {
                         }
                       }}
                       ref={(el) => { sheetRefs.current[sheetKey] = el }}
-                      className="w-full bg-white p-4 rounded-lg border space-y-4 cursor-pointer select-none"
+                      className="w-full bg-white p-3 rounded-lg border space-y-3 cursor-pointer select-none"
                       onClick={() => {
                         const ref = sheetRefs.current[sheetKey]
                         if (ref) {
@@ -3398,34 +3398,34 @@ export default function Home() {
                       }}
                       title="クリックして拡大表示"
                     >
-                      <div className="border-b pb-2.5 flex justify-between items-center">
+                      <div className="border-b pb-2 flex justify-between items-center">
                         <div>
-                          <h2 className="text-xs font-extrabold text-gray-950">KINK BOTTLE SHEET ({parent.title}) {totalPages > 1 && `- P.${safePage + 1}`}</h2>
-                          <p className="text-[9px] text-gray-400">@{profile.username || 'My Jar'}</p>
+                          <h2 className="text-[10px] font-extrabold text-gray-950">KINK BOTTLE SHEET ({parent.title}) {totalPages > 1 && `- P.${safePage + 1}`}</h2>
+                          <p className="text-[8px] text-gray-400">@{profile.username || 'My Jar'}</p>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[8px] sm:text-[9px]">
-                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2 h-2 bg-blue-500 rounded-full inline-block shrink-0"></span> 興味あり</span>
-                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2 h-2 bg-yellow-500 rounded-full inline-block shrink-0"></span> 好きなプレイ</span>
-                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2 h-2 bg-green-500 rounded-full inline-block shrink-0"></span> 経験あり</span>
-                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2 h-2 bg-pink-500 rounded-full inline-block shrink-0"></span> 大好物</span>
-                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2 h-2 bg-purple-500 rounded-full inline-block shrink-0"></span> 所持</span>
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px]">
+                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-1.5 h-1.5 bg-blue-500 rounded-full inline-block shrink-0"></span> 興味あり</span>
+                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-1.5 h-1.5 bg-yellow-500 rounded-full inline-block shrink-0"></span> 好きなプレイ</span>
+                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block shrink-0"></span> 経験あり</span>
+                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-1.5 h-1.5 bg-pink-500 rounded-full inline-block shrink-0"></span> 大好物</span>
+                          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-1.5 h-1.5 bg-purple-500 rounded-full inline-block shrink-0"></span> 所持</span>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-7 gap-2.5 pt-1">
+                      <div className="grid grid-cols-7 gap-1.5 pt-1">
                         {gridItems.map((item: any, index: number) => {
                           const itemChecks = item ? checks[item.id] || [] : []
                           const orderedStatuses = ['interested', 'favorite_play', 'experienced', 'favorite', 'owned']
                           const activeSelectedStatuses = orderedStatuses.filter((s) => itemChecks.includes(s))
 
                           return (
-                            <div key={item ? item.id : `empty-${index}`} className="flex flex-col items-center space-y-1">
-                              <div className="relative w-9 h-12 sm:w-10 sm:h-14 flex flex-col items-center">
-                                <div className="w-4 h-1.5 bg-gray-300 border border-gray-500 rounded-sm z-20"></div>
-                                <div className="w-5.5 h-1 bg-gray-400 border border-gray-600 rounded-sm z-20"></div>
+                            <div key={item ? item.id : `empty-${index}`} className="flex flex-col items-center space-y-0.5">
+                              <div className="relative w-8 h-10 sm:w-9 sm:h-12 flex flex-col items-center">
+                                <div className="w-3.5 h-1 bg-gray-300 border border-gray-500 rounded-xs z-20"></div>
+                                <div className="w-4.5 h-0.5 bg-gray-400 border border-gray-600 rounded-xs z-20"></div>
 
-                                <div className="relative w-9 sm:w-10 h-9.5 sm:h-11 border border-gray-700 rounded-b-xl rounded-t-md overflow-hidden bg-white/40 flex flex-col justify-end z-10">
+                                <div className="relative w-8 sm:w-9 h-8 sm:h-9.5 border border-gray-700 rounded-b-lg rounded-t-xs overflow-hidden bg-white/40 flex flex-col justify-end z-10">
                                   {item && (
                                     <div className="absolute inset-0 flex flex-col justify-end z-0">
                                       {activeSelectedStatuses.map((statusKey) => (
@@ -3437,12 +3437,12 @@ export default function Home() {
                                       ))}
                                     </div>
                                   )}
-                                  <div className="absolute top-1 left-1 w-1 h-7 bg-white/60 rounded-full blur-[1px] z-20 pointer-events-none"></div>
+                                  <div className="absolute top-0.5 left-0.5 w-0.5 h-5 bg-white/60 rounded-full blur-[1px] z-20 pointer-events-none"></div>
                                 </div>
                               </div>
 
-                              <div className={`w-full text-center pt-0.5 ${item ? 'border-t border-gray-900' : 'border-t border-transparent'}`}>
-                                <span className="text-[8px] sm:text-[9px] font-semibold text-gray-800 line-clamp-2 block leading-tight min-h-[22px]">
+                              <div className={`w-full text-center pt-0.5 ${item ? 'border-t border-gray-300' : 'border-t border-transparent'}`}>
+                                <span className="text-[7px] sm:text-[7.5px] font-medium text-gray-800 line-clamp-3 block leading-[1.05] tracking-tighter min-h-[22px] break-all">
                                   {item ? item.title : ''}
                                 </span>
                               </div>
