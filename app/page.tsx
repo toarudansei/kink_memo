@@ -1164,7 +1164,7 @@ export default function Home() {
         }
 
         const newCustomValues = { ...customValues }
-        const shouldSendCustoms = sendToggles.customs_all && customsGlobalEnabled
+        const shouldSendCustoms = masochistUnlocked && sendToggles.customs_all && customsGlobalEnabled
         const filteredCustomValues = shouldSendCustoms ? newCustomValues : {}
 
         const customFieldsPayload = {
@@ -1242,7 +1242,7 @@ export default function Home() {
 
         setShowSendModal(false)
         setSendingToAdmin(false)
-        alert('課題の証拠写真と回答を、マゾ向け項目や設定を含めて正常に一括提出しました！')
+        alert('課題の証拠写真と回答を正常に一括提出しました！')
         setNewAnswer('')
         setSelectedFile(null)
         setPostPreview(null)
@@ -1257,7 +1257,7 @@ export default function Home() {
       
       setShowSendModal(false)
       setSendingToAdmin(false)
-      alert('課題を提出しました（送信演出モード - 追加した項目やマゾ向け設定も送信範囲に含まれました）')
+      alert('課題を提出しました（送信演出モード）')
       setNewAnswer('')
       setSelectedFile(null)
       setPostPreview(null)
@@ -1826,15 +1826,17 @@ export default function Home() {
                 />
               </label>
 
-              <label className="flex items-center justify-between cursor-pointer font-semibold py-1">
-                <span>マゾ向け項目一式を含める（※設定タブで入力した内容も送信範囲になります）</span>
-                <input
-                  type="checkbox"
-                  checked={sendToggles.customs_all}
-                  onChange={(e) => setSendToggles({ ...sendToggles, customs_all: e.target.checked })}
-                  className="w-4 h-4 text-indigo-600 rounded"
-                />
-              </label>
+              {masochistUnlocked && (
+                <label className="flex items-center justify-between cursor-pointer font-semibold py-1">
+                  <span>マゾ向け項目一式を含める</span>
+                  <input
+                    type="checkbox"
+                    checked={sendToggles.customs_all}
+                    onChange={(e) => setSendToggles({ ...sendToggles, customs_all: e.target.checked })}
+                    className="w-4 h-4 text-indigo-600 rounded"
+                  />
+                </label>
+              )}
             </div>
 
             <div className="space-y-3 border p-3 rounded-lg bg-indigo-50/30">
