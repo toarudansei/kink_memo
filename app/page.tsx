@@ -3400,8 +3400,10 @@ export default function Home() {
                     >
                       <div className="border-b pb-2 flex justify-between items-center">
                         <div>
-                          <h2 className="text-[10px] font-extrabold text-gray-950">KINK BOTTLE SHEET ({parent.title}) {totalPages > 1 && `- P.${safePage + 1}`}</h2>
-                          <p className="text-[8px] text-gray-400">@{profile.username || 'My Jar'}</p>
+                          <h2 className="text-[10px] font-extrabold text-gray-950 leading-tight">
+                            KINK BOTTLE SHEET<br />
+                            ({parent.title}) {totalPages > 1 && `- P.${safePage + 1}`}
+                          </h2>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[7px]">
