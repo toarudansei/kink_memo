@@ -97,6 +97,7 @@ const renderHearts = (difficulty: number) => {
 export default function Home() {
   const [user, setUser] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'main' | 'list' | 'settings' | 'admin'>('main')
+  const [showTutorialModal, setShowTutorialModal] = useState(false)
 
   const [profile, setProfile] = useState({
     username: '',
@@ -532,6 +533,9 @@ export default function Home() {
         bio: data.bio || '',
         send_mode: data.send_mode || 'fake',
       })
+      if (!data.has_seen_tutorial) {
+        setShowTutorialModal(true)
+      }
       if (data.custom_fields && typeof data.custom_fields === 'object') {
         const values = data.custom_fields.values || {}
         setCustomValues(values)
@@ -557,7 +561,20 @@ export default function Home() {
       setCustomValues({})
       setCustomsGlobalEnabled(false)
       setCustomImagePreviews({})
+      setShowTutorialModal(true)
     }
+  }
+
+  const handleCompleteTutorial = async () => {
+    if (!user) return
+    setShowTutorialModal(false)
+    await supabase
+      .from('user_profiles')
+      .upsert({
+        user_id: user.id,
+        has_seen_tutorial: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' })
   }
 
   const fetchAnswers = async (userId: string) => {
@@ -1518,6 +1535,32 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
+      {showTutorialModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full space-y-4 shadow-2xl text-center">
+            <h3 className="text-lg font-bold text-indigo-900">✨ 性癖メモへようこそ！</h3>
+            <p className="text-xs text-gray-600 leading-relaxed text-left">
+              当アプリでは、あなたの性癖をカテゴリごとに細かく記録・管理したり、日々の調教課題に挑戦して証拠を提出することができます。
+            </p>
+            
+            <div className="space-y-2 text-left bg-indigo-50/50 p-3 rounded-lg text-xs">
+              <p className="font-bold text-indigo-950">📌 簡単な使い方:</p>
+              <p>1. <b>「性癖一覧」タブ</b>から好みの項目にチェックを入れる。</p>
+              <p>2. メイン画面の<b>お題・課題</b>に回答や証拠写真を提出する。</p>
+              <p>3. 自分のボトルシートを保存してシェアする。</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCompleteTutorial}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition"
+            >
+              使い始めてみる 🚀
+            </button>
+          </div>
+        </div>
+      )}
+
       {selectedHistoryDriveData && (
         <div
           onClick={() => setSelectedHistoryDriveData(null)}
@@ -1900,7 +1943,16 @@ export default function Home() {
         </section>
       ) : activeTab === 'settings' ? (
         <section className="border p-6 rounded-xl space-y-6 bg-white shadow-sm">
-          <h2 className="text-lg font-bold border-b pb-2 text-indigo-600">プロフィール設定</h2>
+          <div className="flex justify-between items-center border-b pb-2">
+            <h2 className="text-lg font-bold text-indigo-600">プロフィール設定</h2>
+            <button
+              type="button"
+              onClick={() => setShowTutorialModal(true)}
+              className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg transition border border-indigo-200"
+            >
+              📖 使い方をもう一度見る
+            </button>
+          </div>
           <form onSubmit={handleSaveProfile} className="space-y-4 text-sm">
             <div>
               <label className="block font-semibold mb-1">ユーザーネーム</label>
