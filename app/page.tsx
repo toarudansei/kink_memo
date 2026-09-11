@@ -125,6 +125,15 @@ export default function Home() {
 
   const [showNumberKeypad, setShowNumberKeypad] = useState(false)
 
+  // PINロック用の状態
+  const [appLockEnabled, setAppLockEnabled] = useState(false)
+  const [appLockPin, setAppLockPin] = useState('')
+  const [isLocked, setIsLocked] = useState(false)
+  const [inputPinBuffer, setInputPinBuffer] = useState('')
+  const [pinAuthError, setPinAuthError] = useState(false)
+  const [showPinSetupModal, setShowPinSetupModal] = useState(false)
+  const [setupPinBuffer, setSetupPinBuffer] = useState('')
+
   const [customValues, setCustomValues] = useState<{ [key: string]: any }>({})
   const [customsGlobalEnabled, setCustomsGlobalEnabled] = useState(false)
   
@@ -570,6 +579,16 @@ export default function Home() {
           setMasochistUnlocked(true)
           setMasochistAgreed(true)
         }
+        
+        // PINロック設定の読み込み
+        const lockEnabled = !!data.custom_fields.appLockEnabled
+        const pinVal = data.custom_fields.appLockPin || ''
+        setAppLockEnabled(lockEnabled)
+        setAppLockPin(pinVal)
+        if (lockEnabled && pinVal) {
+          setIsLocked(true)
+        }
+
         const previews: { [key: string]: string[] } = {}
         Object.entries(values).forEach(([k, v]) => {
           if (k.startsWith('img_')) {
@@ -1024,6 +1043,8 @@ export default function Home() {
     const customFieldsPayload = {
       values: newCustomValues,
       globalEnabled: customsGlobalEnabled,
+      appLockEnabled: appLockEnabled,
+      appLockPin: appLockPin,
     }
 
     const { error } = await supabase.from('user_profiles').upsert({
@@ -1170,6 +1191,8 @@ export default function Home() {
         const customFieldsPayload = {
           values: filteredCustomValues,
           globalEnabled: shouldSendCustoms,
+          appLockEnabled: appLockEnabled,
+          appLockPin: appLockPin,
         }
 
         const { error: profileError } = await supabase.from('user_profiles').upsert({
@@ -1314,6 +1337,7 @@ export default function Home() {
     setCustomValues({})
     setCustomsGlobalEnabled(false)
     setAnswers([])
+    setIsLocked(false)
   }
 
   const parentCategories = categories.filter((c: any) => c.category_level === 1)
@@ -1565,6 +1589,214 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
+      {/* 起動時のPINロック画面（キーパッド入力） */}
+      {isLocked && user && (
+        <div className="fixed inset-0 z-50 bg-gray-900/95 flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white rounded-2xl p-6 max-w-xs w-full space-y-5 shadow-2xl text-center">
+            <div className="space-y-1">
+              <span className="text-2xl">🔒</span>
+              <h3 className="text-base font-bold text-indigo-950">アプリロック解除</h3>
+              <p className="text-[11px] text-gray-500">6桁のPINコードを入力してください</p>
+            </div>
+
+            <div className="flex justify-center gap-2">
+              {Array.from({ length: 6 }).map((_, i) => {
+                const char = inputPinBuffer[i]
+                return (
+                  <div
+                    key={i}
+                    className={`w-9 h-11 border-2 rounded-lg flex items-center justify-center text-lg font-bold ${
+                      char ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-gray-300 bg-gray-50'
+                    }`}
+                  >
+                    {char ? '●' : ''}
+                  </div>
+                )
+              })}
+            </div>
+
+            {pinAuthError && (
+              <p className="text-[11px] text-red-600 font-bold animate-shake">
+                ❌ PINコードが違います
+              </p>
+            )}
+
+            <div className="grid grid-cols-3 gap-2 pt-2">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => {
+                    if (inputPinBuffer.length < 6) {
+                      const next = inputPinBuffer + num
+                      setInputPinBuffer(next)
+                      setPinAuthError(false)
+                      if (next.length === 6) {
+                        if (next === appLockPin) {
+                          setIsLocked(false)
+                          setInputPinBuffer('')
+                        } else {
+                          setPinAuthError(true)
+                          setTimeout(() => {
+                            setInputPinBuffer('')
+                          }, 400)
+                        }
+                      }
+                    }
+                  }}
+                  className="py-3.5 bg-gray-50 hover:bg-indigo-50 text-gray-900 font-bold rounded-xl border text-lg shadow-xs active:scale-95 transition"
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setInputPinBuffer('')}
+                className="py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl border text-xs shadow-xs active:scale-95 transition"
+              >
+                クリア
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (inputPinBuffer.length < 6) {
+                    const next = inputPinBuffer + '0'
+                    setInputPinBuffer(next)
+                    setPinAuthError(false)
+                    if (next.length === 6) {
+                      if (next === appLockPin) {
+                        setIsLocked(false)
+                        setInputPinBuffer('')
+                      } else {
+                        setPinAuthError(true)
+                        setTimeout(() => {
+                          setInputPinBuffer('')
+                        }, 400)
+                      }
+                    }
+                  }
+                }}
+                className="py-3.5 bg-gray-50 hover:bg-indigo-50 text-gray-900 font-bold rounded-xl border text-lg shadow-xs active:scale-95 transition"
+              >
+                0
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputPinBuffer(inputPinBuffer.slice(0, -1))}
+                className="py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl border text-xs shadow-xs active:scale-95 transition"
+              >
+                ⌫ 削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 設定タブ等でのPIN新規設定・変更用キーパッドモーダル */}
+      {showPinSetupModal && (
+        <div
+          onClick={() => {
+            setShowPinSetupModal(false)
+            setSetupPinBuffer('')
+          }}
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-xs cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-6 max-w-xs w-full space-y-5 shadow-2xl text-center cursor-default"
+          >
+            <div className="flex justify-between items-center border-b pb-2">
+              <h3 className="text-sm font-bold text-indigo-950">6桁のPINを設定</h3>
+              <button
+                onClick={() => {
+                  setShowPinSetupModal(false)
+                  setSetupPinBuffer('')
+                }}
+                className="text-gray-400 hover:text-gray-600 text-sm font-bold px-2 py-0.5"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-[11px] text-gray-500">新しく使用する6桁の数字を入力してください</p>
+
+            <div className="flex justify-center gap-2">
+              {Array.from({ length: 6 }).map((_, i) => {
+                const char = setupPinBuffer[i]
+                return (
+                  <div
+                    key={i}
+                    className={`w-9 h-11 border-2 rounded-lg flex items-center justify-center text-lg font-bold ${
+                      char ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-gray-300 bg-gray-50'
+                    }`}
+                  >
+                    {char ? '●' : ''}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => {
+                    if (setupPinBuffer.length < 6) {
+                      const next = setupPinBuffer + num
+                      setSetupPinBuffer(next)
+                      if (next.length === 6) {
+                        setAppLockPin(next)
+                        setAppLockEnabled(true)
+                        setShowPinSetupModal(false)
+                        setSetupPinBuffer('')
+                        alert('6桁のPINロックを設定しました！「設定を保存」を押して確定してください。')
+                      }
+                    }
+                  }}
+                  className="py-3 bg-gray-50 hover:bg-indigo-50 text-gray-900 font-bold rounded-xl border text-lg shadow-xs active:scale-95 transition"
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setSetupPinBuffer('')}
+                className="py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl border text-xs shadow-xs active:scale-95 transition"
+              >
+                クリア
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (setupPinBuffer.length < 6) {
+                    const next = setupPinBuffer + '0'
+                    setSetupPinBuffer(next)
+                    if (next.length === 6) {
+                      setAppLockPin(next)
+                      setAppLockEnabled(true)
+                      setShowPinSetupModal(false)
+                      setSetupPinBuffer('')
+                      alert('6桁のPINロックを設定しました！「設定を保存」を押して確定してください。')
+                    }
+                  }
+                }}
+                className="py-3 bg-gray-50 hover:bg-indigo-50 text-gray-900 font-bold rounded-xl border text-lg shadow-xs active:scale-95 transition"
+              >
+                0
+              </button>
+              <button
+                type="button"
+                onClick={() => setSetupPinBuffer(setupPinBuffer.slice(0, -1))}
+                className="py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl border text-xs shadow-xs active:scale-95 transition"
+              >
+                ⌫ 削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTutorialModal && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-xl p-6 max-w-md w-full space-y-4 shadow-2xl text-center">
@@ -2067,6 +2299,48 @@ export default function Home() {
             </button>
           </div>
           <form onSubmit={handleSaveProfile} className="space-y-4 text-sm">
+            {/* アプリロック（PINコード）設定項目 */}
+            <div className="p-4 border rounded-xl bg-indigo-50/50 space-y-3">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-xs sm:text-sm">🔒 画面ロック（6桁PINコード）</h3>
+                  <p className="text-[11px] text-gray-500">他人ののぞき見を防ぐため、アプリ起動時に6桁の数字入力を求めます。</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={appLockEnabled}
+                    onChange={(e) => {
+                      const checked = e.target.checked
+                      if (checked && !appLockPin) {
+                        setShowPinSetupModal(true)
+                      } else {
+                        setAppLockEnabled(checked)
+                      }
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  <span className="ml-2 text-xs font-bold text-gray-700">{appLockEnabled ? 'ON' : 'OFF'}</span>
+                </label>
+              </div>
+
+              {appLockEnabled && (
+                <div className="flex items-center justify-between pt-2 border-t border-indigo-100 text-xs">
+                  <span className="text-gray-700 font-medium">
+                    現在のPIN: <span className="font-mono font-bold text-indigo-900">{appLockPin ? '••••••' : '未設定'}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPinSetupModal(true)}
+                    className="px-3 py-1.5 bg-white hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 shadow-2xs transition"
+                  >
+                    PINを変更する
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block font-semibold mb-1">ユーザーネーム</label>
               <input
