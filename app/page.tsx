@@ -327,6 +327,9 @@ export default function Home() {
         setProfile({ username: '', avatar_url: '', bio: '', age: '', send_mode: 'fake' })
         setCustomValues({})
         setCustomsGlobalEnabled(false)
+        setAppLockEnabled(false)
+        setAppLockPin('')
+        setIsLocked(false)
       }
     }
     initAuth()
@@ -343,7 +346,10 @@ export default function Home() {
         setProfile({ username: '', avatar_url: '', bio: '', age: '', send_mode: 'fake' })
         setCustomValues({})
         setCustomsGlobalEnabled(false)
+        setAppLockEnabled(false)
+        setAppLockPin('')
         setAnswers([])
+        setIsLocked(false)
       }
     })
 
@@ -1336,6 +1342,8 @@ export default function Home() {
     setProfile({ username: '', avatar_url: '', bio: '', age: '', send_mode: 'fake' })
     setCustomValues({})
     setCustomsGlobalEnabled(false)
+    setAppLockEnabled(false)
+    setAppLockPin('')
     setAnswers([])
     setIsLocked(false)
   }
