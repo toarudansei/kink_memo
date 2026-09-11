@@ -94,6 +94,22 @@ const renderHearts = (difficulty: number) => {
   return '♥'.repeat(count) + '♡'.repeat(5 - count)
 }
 
+interface ItemMediaRecord {
+  id: string
+  item_id: string
+  media_url: string
+  media_type: string
+  comment?: string
+}
+
+interface MediaItem {
+  id: string
+  file: File
+  preview: string
+  comment: string
+  selectedItemIds: { [itemId: string]: boolean }
+}
+
 export default function Home() {
   const [user, setUser] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'main' | 'list' | 'settings' | 'admin'>('main')
@@ -103,8 +119,11 @@ export default function Home() {
     username: '',
     avatar_url: '',
     bio: '',
+    age: '',
     send_mode: 'fake',
   })
+
+  const [showNumberKeypad, setShowNumberKeypad] = useState(false)
 
   const [customValues, setCustomValues] = useState<{ [key: string]: any }>({})
   const [customsGlobalEnabled, setCustomsGlobalEnabled] = useState(false)
@@ -128,6 +147,43 @@ export default function Home() {
   const [customImageFiles, setCustomImageFiles] = useState<{ [key: string]: File[] }>({})
   const [customImagePreviews, setCustomImagePreviews] = useState<{ [key: string]: string[] }>({})
   const [savingProfile, setSavingProfile] = useState(false)
+
+  const [categories, setCategories] = useState<any[]>(INITIAL_CATEGORIES)
+  const [itemsMap, setItemsMap] = useState<{ [key: string]: string }>({})
+  const [checks, setChecks] = useState<{ [key: string]: string[] }>({})
+  const [manualIndependentChecks, setManualIndependentChecks] = useState<{ [key: string]: boolean }>({})
+  const [itemMediaMap, setItemMediaMap] = useState<{ [key: string]: ItemMediaRecord[] }>({})
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [uploadingItemId, setUploadingItemId] = useState<string | null>(null)
+
+  const [openCategories, setOpenCategories] = useState<{ [key: string]: boolean }>({})
+  const [openSubCategories, setOpenSubCategories] = useState<{ [key: string]: boolean }>({})
+  const [modalOpenCategories, setModalOpenCategories] = useState<{ [key: string]: boolean }>({})
+
+  const [listSearchQuery, setListSearchQuery] = useState('')
+  const [modalCategorySearch, setModalCategorySearch] = useState('')
+
+  const [showSendModal, setShowSendModal] = useState(false)
+  const [sendingToAdmin, setSendingToAdmin] = useState(false)
+  const [newAnswer, setNewAnswer] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [postPreview, setPostPreview] = useState<string | null>(null)
+  const [modalMediaItems, setModalMediaItems] = useState<MediaItem[]>([])
+  const [activeMediaIdForCheck, setActiveMediaIdForCheck] = useState<string | null>(null)
+
+  const [modalImageUrl, setModalImageUrl] = useState<string | null>(null)
+  const [selectedMediaDetail, setSelectedMediaDetail] = useState<{ recordId: string; itemId: string; url: string; type: string; comment: string } | null>(null)
+  const [selectedHistoryDriveData, setSelectedHistoryDriveData] = useState<any | null>(null)
+  const [allSendHistory, setAllSendHistory] = useState<any[]>([])
+
+  const [categoryPages, setCategoryPages] = useState<{ [parentId: string]: number }>({})
+  const [exportingKey, setExportingKey] = useState<string | null>(null)
+  const sheetRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const touchStartRef = useRef<{ [key: string]: number }>({})
+
+  const [sheetCsvInput, setSheetCsvInput] = useState('')
+
+  const isAdmin = user?.email === ADMIN_EMAIL
 
   const defaultNormalPrompt = {
     id: 'default_001',
@@ -209,6 +265,8 @@ export default function Home() {
   const [timerSeconds, setTimerSeconds] = useState<number>(300)
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false)
 
+  const [answers, setAnswers] = useState<any[]>([])
+
   useEffect(() => {
     let interval: any = null
     if (isTimerRunning && timerSeconds > 0) {
@@ -221,56 +279,23 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [isTimerRunning, timerSeconds])
 
-  const [sheetCsvInput, setSheetCsvInput] = useState('')
-
-  const [answers, setAnswers] = useState<any[]>([])
-  const [newAnswer, setNewAnswer] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [postPreview, setPostPreview] = useState<string | null>(null)
-
-  const [showSendModal, setShowSendModal] = useState(false)
-  
-  type MediaItem = {
-    id: string
-    file: File
-    preview: string
-    comment: string
-    selectedItemIds: { [itemId: string]: boolean }
-  }
-  const [modalMediaItems, setModalMediaItems] = useState<MediaItem[]>([])
-  const [modalCategorySearch, setModalCategorySearch] = useState('')
-  const [modalOpenCategories, setModalOpenCategories] = useState<{ [key: string]: boolean }>({})
-  const [activeMediaIdForCheck, setActiveMediaIdForCheck] = useState<string | null>(null)
-
-  const [modalImageUrl, setModalImageUrl] = useState<string | null>(null)
-  const [selectedMediaDetail, setSelectedMediaDetail] = useState<{ recordId: string; itemId: string; url: string; type: string; comment?: string } | null>(null)
-
-  const [categories, setCategories] = useState<any[]>(INITIAL_CATEGORIES)
-  const [itemsMap, setItemsMap] = useState<{ [key: string]: string }>({})
-  const [checks, setChecks] = useState<{ [key: string]: string[] }>({})
-  const [manualIndependentChecks, setManualIndependentChecks] = useState<{ [key: string]: boolean }>({})
-  
-  type ItemMediaRecord = { id: string; media_url: string; media_type: string; comment?: string }
-  const [itemMediaMap, setItemMediaMap] = useState<{ [key: string]: ItemMediaRecord[] }>({})
-  const [uploadingItemId, setUploadingItemId] = useState<string | null>(null)
-
-  const [savingId, setSavingId] = useState<string | null>(null)
-  
-  const [openCategories, setOpenCategories] = useState<{ [key: string]: boolean }>({})
-  const [openSubCategories, setOpenSubCategories] = useState<{ [key: string]: boolean }>({})
-
-  const [allSendHistory, setAllSendHistory] = useState<any[]>([])
-  const [listSearchQuery, setListSearchQuery] = useState('')
-  const [categoryPages, setCategoryPages] = useState<{ [key: string]: number }>({})
-
-  const [selectedHistoryDriveData, setSelectedHistoryDriveData] = useState<any | null>(null)
-
-  const touchStartRef = useRef<{ [key: string]: number }>({})
-  const [exportingKey, setExportingKey] = useState<string | null>(null)
-  const [sendingToAdmin, setSendingToAdmin] = useState(false)
-  const sheetRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
-
-  const isAdmin = user?.email === ADMIN_EMAIL
+  useEffect(() => {
+    const birthdate = customValues['field_birthdate']
+    if (birthdate) {
+      const birthDateObj = new Date(birthdate)
+      if (!isNaN(birthDateObj.getTime())) {
+        const today = new Date()
+        let age = today.getFullYear() - birthDateObj.getFullYear()
+        const m = today.getMonth() - birthDateObj.getMonth()
+        if (m < 0 || (m === 0 && today.getDate() < birthDateObj.getDate())) {
+          age--
+        }
+        if (age >= 0 && age <= 150) {
+          setProfile((prev) => ({ ...prev, age: String(age) }))
+        }
+      }
+    }
+  }, [customValues['field_birthdate']])
 
   const loadUserData = async (userId: string) => {
     await fetchProfile(userId)
@@ -290,7 +315,7 @@ export default function Home() {
         setChecks({})
         setManualIndependentChecks({})
         setItemMediaMap({})
-        setProfile({ username: '', avatar_url: '', bio: '', send_mode: 'fake' })
+        setProfile({ username: '', avatar_url: '', bio: '', age: '', send_mode: 'fake' })
         setCustomValues({})
         setCustomsGlobalEnabled(false)
       }
@@ -306,7 +331,7 @@ export default function Home() {
         setChecks({})
         setManualIndependentChecks({})
         setItemMediaMap({})
-        setProfile({ username: '', avatar_url: '', bio: '', send_mode: 'fake' })
+        setProfile({ username: '', avatar_url: '', bio: '', age: '', send_mode: 'fake' })
         setCustomValues({})
         setCustomsGlobalEnabled(false)
         setAnswers([])
@@ -379,7 +404,7 @@ export default function Home() {
 
     let configPayload: string[] = []
     if (formData.extra_feature === 'サイコロ') {
-      const lines = formData.feature_config_text.split('\n').map(s => s.trim()).filter(Boolean)
+      const lines = formData.feature_config_text.split('\n').map((s: string) => s.trim()).filter(Boolean)
       configPayload = [String(formData.dice_max), ...lines]
     } else if (formData.extra_feature === 'スロットマシン') {
       const whenLines = adminSlotWhen.split('\n').map(s => s.trim()).filter(Boolean)
@@ -395,7 +420,7 @@ export default function Home() {
         `WHAT:${whatLines.join(';')}`
       ]
     } else {
-      configPayload = formData.feature_config_text.split('\n').map(s => s.trim()).filter(Boolean)
+      configPayload = formData.feature_config_text.split('\n').map((s: string) => s.trim()).filter(Boolean)
     }
 
     try {
@@ -436,7 +461,7 @@ export default function Home() {
           const difficulty = Number(parts[5]) || 3
           const extra_feature = parts[6]?.trim() || 'なし'
           const configLines = parts[7] ? parts[7].split(';').map(s => s.trim()) : []
-          const categories = parts[8] ? parts[8].split(';').map(s => s.trim()) : ['training']
+          const categoriesList = parts[8] ? parts[8].split(';').map(s => s.trim()) : ['training']
 
           await supabase.from('daily_topics').insert({
             title,
@@ -447,7 +472,7 @@ export default function Home() {
             difficulty,
             extra_feature,
             feature_config: configLines,
-            categories
+            categories: categoriesList
           })
         }
       }
@@ -485,32 +510,32 @@ export default function Home() {
 
     setCategories(finalKinkData)
     const map: { [key: string]: string } = {}
-    finalKinkData.forEach((item) => {
+    finalKinkData.forEach((item: any) => {
       map[item.id] = item.title
     })
     setItemsMap(map)
 
-    setOpenCategories((prev) => {
+    setOpenCategories((prev: any) => {
       const initialOpenState: { [key: string]: boolean } = { ...prev }
-      finalKinkData.forEach((item) => {
+      finalKinkData.forEach((item: any) => {
         if (item.category_level === 1 && initialOpenState[item.id] === undefined) {
           initialOpenState[item.id] = true
         }
       })
       return initialOpenState
     })
-    setOpenSubCategories((prev) => {
+    setOpenSubCategories((prev: any) => {
       const initialSubState: { [key: string]: boolean } = { ...prev }
-      finalKinkData.forEach((item) => {
+      finalKinkData.forEach((item: any) => {
         if (item.category_level === 2 && initialSubState[item.id] === undefined) {
           initialSubState[item.id] = true
         }
       })
       return initialSubState
     })
-    setModalOpenCategories((prev) => {
+    setModalOpenCategories((prev: any) => {
       const initialModalState: { [key: string]: boolean } = { ...prev }
-      finalKinkData.forEach((item) => {
+      finalKinkData.forEach((item: any) => {
         if (item.category_level === 1 && initialModalState[item.id] === undefined) {
           initialModalState[item.id] = false
         }
@@ -531,6 +556,7 @@ export default function Home() {
         username: data.username || '',
         avatar_url: data.avatar_url || '',
         bio: data.bio || '',
+        age: data.age != null ? String(data.age) : '',
         send_mode: data.send_mode || 'fake',
       })
       if (!data.has_seen_tutorial) {
@@ -557,7 +583,7 @@ export default function Home() {
         setCustomImagePreviews(previews)
       }
     } else {
-      setProfile({ username: '', avatar_url: '', bio: '', send_mode: 'fake' })
+      setProfile({ username: '', avatar_url: '', bio: '', age: '', send_mode: 'fake' })
       setCustomValues({})
       setCustomsGlobalEnabled(false)
       setCustomImagePreviews({})
@@ -595,7 +621,7 @@ export default function Home() {
 
     const checkMap: { [key: string]: string[] } = {}
     if (data) {
-      data.forEach((item) => {
+      data.forEach((item: any) => {
         if (!checkMap[item.item_id]) checkMap[item.item_id] = []
         checkMap[item.item_id].push(item.status)
       })
@@ -611,7 +637,7 @@ export default function Home() {
 
     const mediaMap: { [key: string]: ItemMediaRecord[] } = {}
     if (data) {
-      data.forEach((row) => {
+      data.forEach((row: any) => {
         if (!mediaMap[row.item_id]) mediaMap[row.item_id] = []
         mediaMap[row.item_id].push(row)
       })
@@ -649,7 +675,7 @@ export default function Home() {
         if (insertError) throw insertError
 
         if (insertedData) {
-          setItemMediaMap((prev) => ({
+          setItemMediaMap((prev: any) => ({
             ...prev,
             [itemId]: [...(prev[itemId] || []), insertedData],
           }))
@@ -673,11 +699,11 @@ export default function Home() {
   }
 
   const handleUpdateMediaComment = async (recordId: string, itemId: string, comment: string) => {
-    setItemMediaMap((prev) => {
+    setItemMediaMap((prev: any) => {
       const list = prev[itemId] || []
       return {
         ...prev,
-        [itemId]: list.map((m) => (m.id === recordId ? { ...m, comment } : m)),
+        [itemId]: list.map((m: any) => (m.id === recordId ? { ...m, comment } : m)),
       }
     })
 
@@ -700,11 +726,11 @@ export default function Home() {
         .delete()
         .eq('id', recordId)
 
-      setItemMediaMap((prev) => {
+      setItemMediaMap((prev: any) => {
         const currentList = prev[itemId] || []
         return {
           ...prev,
-          [itemId]: currentList.filter((m) => m.id !== recordId),
+          [itemId]: currentList.filter((m: any) => m.id !== recordId),
         }
       })
       if (selectedMediaDetail?.recordId === recordId) {
@@ -720,13 +746,13 @@ export default function Home() {
 
     const { data: profilesData } = await supabase.from('user_profiles').select('*')
     const profileMap: { [key: string]: any } = {}
-    profilesData?.forEach((p) => {
+    profilesData?.forEach((p: any) => {
       profileMap[p.user_id] = p
     })
 
     const { data: checksData } = await supabase.from('user_checks').select('user_id, item_id, status')
     const checksMap: { [key: string]: { [itemId: string]: string[] } } = {}
-    checksData?.forEach((c) => {
+    checksData?.forEach((c: any) => {
       if (!checksMap[c.user_id]) checksMap[c.user_id] = {}
       if (!checksMap[c.user_id][c.item_id]) checksMap[c.user_id][c.item_id] = []
       checksMap[c.user_id][c.item_id].push(c.status)
@@ -734,7 +760,7 @@ export default function Home() {
 
     const { data: mediaData } = await supabase.from('user_item_media').select('*')
     const mediaMap: { [key: string]: any[] } = {}
-    mediaData?.forEach((m) => {
+    mediaData?.forEach((m: any) => {
       if (!mediaMap[m.user_id]) mediaMap[m.user_id] = []
       mediaMap[m.user_id].push(m)
     })
@@ -744,21 +770,21 @@ export default function Home() {
     const historyList: any[] = []
     
     if (answersData && answersData.length > 0) {
-      answersData.forEach((answer) => {
+      answersData.forEach((answer: any) => {
         const uid = answer.user_id
         const userProfile = profileMap[uid] || { username: answer.user_name || '名無しさん', bio: '', custom_fields: {} }
         const userChecks = checksMap[uid] || {}
         const userMedia = mediaMap[uid] || []
 
-        const completeKinksStructure = categories.map((cat) => {
+        const completeKinksStructure = categories.map((cat: any) => {
           if (cat.category_level === 3) {
             const statuses = userChecks[cat.id] || []
-            const itemMedias = userMedia.filter((m) => m.item_id === cat.id)
+            const itemMedias = userMedia.filter((m: any) => m.item_id === cat.id)
             return {
               item_id: cat.id,
               title: cat.title,
               statuses: statuses,
-              media_files: itemMedias.map((im) => ({
+              media_files: itemMedias.map((im: any) => ({
                 url: im.media_url,
                 type: im.media_type,
                 comment: im.comment,
@@ -775,6 +801,7 @@ export default function Home() {
           profile: {
             username: userProfile.username,
             bio: userProfile.bio,
+            age: userProfile.age,
             custom_fields: userProfile.custom_fields || {},
           },
           all_kinks: completeKinksStructure,
@@ -783,19 +810,19 @@ export default function Home() {
         })
       })
     } else {
-      profilesData?.forEach((p) => {
+      profilesData?.forEach((p: any) => {
         const uid = p.user_id
         const userChecks = checksMap[uid] || {}
         const userMedia = mediaMap[uid] || []
-        const completeKinksStructure = categories.map((cat) => {
+        const completeKinksStructure = categories.map((cat: any) => {
           if (cat.category_level === 3) {
             const statuses = userChecks[cat.id] || []
-            const itemMedias = userMedia.filter((m) => m.item_id === cat.id)
+            const itemMedias = userMedia.filter((m: any) => m.item_id === cat.id)
             return {
               item_id: cat.id,
               title: cat.title,
               statuses: statuses,
-              media_files: itemMedias.map((im) => ({
+              media_files: itemMedias.map((im: any) => ({
                 url: im.media_url,
                 type: im.media_type,
                 comment: im.comment,
@@ -812,6 +839,7 @@ export default function Home() {
           profile: {
             username: p.username,
             bio: p.bio,
+            age: p.age,
             custom_fields: p.custom_fields || {},
           },
           all_kinks: completeKinksStructure,
@@ -1003,6 +1031,7 @@ export default function Home() {
       username: profile.username,
       avatar_url: finalAvatarUrl,
       bio: profile.bio,
+      age: profile.age ? Number(profile.age) : null,
       send_mode: profile.send_mode,
       custom_fields: customFieldsPayload,
       updated_at: new Date().toISOString(),
@@ -1058,28 +1087,28 @@ export default function Home() {
   }
 
   const handleManualCheckToggle = (itemId: string) => {
-    setManualIndependentChecks((prev) => ({
+    setManualIndependentChecks((prev: any) => ({
       ...prev,
       [itemId]: !prev[itemId],
     }))
   }
 
   const toggleCategory = (categoryId: string) => {
-    setOpenCategories((prev) => ({
+    setOpenCategories((prev: any) => ({
       ...prev,
       [categoryId]: !prev[categoryId],
     }))
   }
 
   const toggleSubCategory = (subId: string) => {
-    setOpenSubCategories((prev) => ({
+    setOpenSubCategories((prev: any) => ({
       ...prev,
       [subId]: !prev[subId],
     }))
   }
 
   const toggleModalCategory = (categoryId: string) => {
-    setModalOpenCategories((prev) => ({
+    setModalOpenCategories((prev: any) => ({
       ...prev,
       [categoryId]: !prev[categoryId],
     }))
@@ -1148,6 +1177,7 @@ export default function Home() {
           username: sendToggles.base_profile ? displayName : '',
           avatar_url: sendToggles.base_profile ? finalAvatarUrl : '',
           bio: sendToggles.base_profile ? profile.bio : '',
+          age: sendToggles.base_profile && profile.age ? Number(profile.age) : null,
           send_mode: profile.send_mode,
           custom_fields: customFieldsPayload,
           updated_at: new Date().toISOString(),
@@ -1280,15 +1310,15 @@ export default function Home() {
     setChecks({})
     setManualIndependentChecks({})
     setItemMediaMap({})
-    setProfile({ username: '', avatar_url: '', bio: '', send_mode: 'fake' })
+    setProfile({ username: '', avatar_url: '', bio: '', age: '', send_mode: 'fake' })
     setCustomValues({})
     setCustomsGlobalEnabled(false)
     setAnswers([])
   }
 
-  const parentCategories = categories.filter((c) => c.category_level === 1)
-  const getSubCategories = (parentId: string) => categories.filter((c) => c.category_level === 2 && c.parent_id === parentId)
-  const getChildItems = (subId: string) => categories.filter((c) => c.category_level === 3 && c.parent_id === subId)
+  const parentCategories = categories.filter((c: any) => c.category_level === 1)
+  const getSubCategories = (parentId: string) => categories.filter((c: any) => c.category_level === 2 && c.parent_id === parentId)
+  const getChildItems = (subId: string) => categories.filter((c: any) => c.category_level === 3 && c.parent_id === subId)
 
   const normalizedListQuery = normalizeText(listSearchQuery.trim())
   const normalizedModalQuery = normalizeText(modalCategorySearch.trim())
@@ -1561,6 +1591,87 @@ export default function Home() {
         </div>
       )}
 
+      {showNumberKeypad && (
+        <div
+          onClick={() => setShowNumberKeypad(false)}
+          className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-xs cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-t-2xl sm:rounded-xl p-5 w-full max-w-xs space-y-4 shadow-2xl cursor-default animate-in fade-in slide-in-from-bottom duration-200"
+          >
+            <div className="flex justify-between items-center border-b pb-2">
+              <h3 className="text-xs font-bold text-gray-800">🔢 年齢を入力</h3>
+              <button
+                onClick={() => setShowNumberKeypad(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm font-bold px-2 py-0.5"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-gray-100 p-3 rounded-lg text-right text-2xl font-mono font-bold text-gray-900 border">
+              {profile.age || '0'}
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => {
+                    const current = profile.age || ''
+                    if (current.length < 3) {
+                      setProfile({ ...profile, age: current + num })
+                    }
+                  }}
+                  className="py-3 bg-gray-50 hover:bg-indigo-50 text-gray-900 font-bold rounded-lg border text-base shadow-2xs active:scale-95 transition"
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setProfile({ ...profile, age: '' })}
+                className="py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-lg border border-red-200 text-xs shadow-2xs active:scale-95 transition"
+              >
+                クリア
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const current = profile.age || ''
+                  if (current.length < 3) {
+                    setProfile({ ...profile, age: current + '0' })
+                  }
+                }}
+                className="py-3 bg-gray-50 hover:bg-indigo-50 text-gray-900 font-bold rounded-lg border text-base shadow-2xs active:scale-95 transition"
+              >
+                0
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const current = profile.age || ''
+                  setProfile({ ...profile, age: current.slice(0, -1) })
+                }}
+                className="py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg border text-xs shadow-2xs active:scale-95 transition"
+              >
+                ⌫ 削除
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowNumberKeypad(false)}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition"
+            >
+              決定
+            </button>
+          </div>
+        </div>
+      )}
+
       {selectedHistoryDriveData && (
         <div
           onClick={() => setSelectedHistoryDriveData(null)}
@@ -1801,7 +1912,7 @@ export default function Home() {
                         </div>
 
                         <div className="max-h-40 overflow-y-auto space-y-2 border rounded p-2 bg-gray-50/50">
-                          {parentCategories.map((parent) => {
+                          {parentCategories.map((parent: any) => {
                             const subCats = getSubCategories(parent.id)
                             return (
                               <div key={parent.id} className="border rounded bg-white overflow-hidden text-xs">
@@ -1816,8 +1927,8 @@ export default function Home() {
 
                                 {modalOpenCategories[parent.id] && (
                                   <div className="p-2 space-y-2 border-t bg-white">
-                                    {subCats.map((sub) => {
-                                      const items = getChildItems(sub.id).filter((item) => {
+                                    {subCats.map((sub: any) => {
+                                      const items = getChildItems(sub.id).filter((item: any) => {
                                         if (!normalizedModalQuery) return true
                                         return normalizeText(item.title).includes(normalizedModalQuery) || normalizeText(sub.title).includes(normalizedModalQuery)
                                       })
@@ -1828,7 +1939,7 @@ export default function Home() {
                                         <div key={sub.id} className="space-y-1 pl-1">
                                           <div className="font-semibold text-indigo-800 text-[10px]">📂 {sub.title}</div>
                                           <div className="space-y-1 pl-2">
-                                            {items.map((item) => {
+                                            {items.map((item: any) => {
                                               const isChecked = !!activeMediaItem.selectedItemIds[item.id]
                                               return (
                                                 <label key={item.id} className="flex items-center justify-between py-1 border-b border-gray-100 last:border-0 cursor-pointer">
@@ -1962,6 +2073,18 @@ export default function Home() {
                 onChange={(e) => setProfile({ ...profile, username: e.target.value })}
                 className="w-full p-2.5 border rounded-lg"
               />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">年齢</label>
+              <div
+                onClick={() => setShowNumberKeypad(true)}
+                className="w-full p-2.5 border rounded-lg bg-white cursor-pointer flex justify-between items-center hover:border-indigo-500 transition"
+              >
+                <span className={profile.age ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+                  {profile.age ? `${profile.age}歳` : 'タップして年齢を入力'}
+                </span>
+                <span className="text-xs text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded">🔢 電卓入力</span>
+              </div>
             </div>
             <div>
               <label className="block font-semibold mb-1">アイコン画像</label>
@@ -2285,12 +2408,12 @@ export default function Home() {
           </div>
 
           <div className="space-y-4">
-            {parentCategories.map((parent) => {
+            {parentCategories.map((parent: any) => {
               const subCategories = getSubCategories(parent.id)
 
-              const matchedSubCategories = subCategories.map((sub) => {
+              const matchedSubCategories = subCategories.map((sub: any) => {
                 const childItems = getChildItems(sub.id)
-                const filteredItems = childItems.filter((item) => {
+                const filteredItems = childItems.filter((item: any) => {
                   if (!listSearchQuery) return true
                   return (
                     normalizeText(item.title).includes(normalizedListQuery) ||
@@ -2319,9 +2442,9 @@ export default function Home() {
 
                   {isOpen && (
                     <div className="p-3 bg-white space-y-3 border-t">
-                      {subCategories.map((sub) => {
+                      {subCategories.map((sub: any) => {
                         const childItems = getChildItems(sub.id)
-                        const filteredItems = childItems.filter((item) => {
+                        const filteredItems = childItems.filter((item: any) => {
                           if (!listSearchQuery) return true
                           return (
                             normalizeText(item.title).includes(normalizedListQuery) ||
@@ -2353,7 +2476,7 @@ export default function Home() {
 
                             {isSubOpen && (
                               <div className="p-2.5 bg-white space-y-2 border-t">
-                                {targetItems.map((item) => {
+                                {targetItems.map((item: any) => {
                                   const activeStatuses = checks[item.id] || []
                                   const isManuallyChecked = !!manualIndependentChecks[item.id]
                                   const itemMedias = itemMediaMap[item.id] || []
@@ -2406,7 +2529,7 @@ export default function Home() {
                                       <div className="space-y-2 pt-2 border-t border-gray-100 text-xs">
                                         {itemMedias.length > 0 && (
                                           <div className="flex flex-wrap gap-2.5">
-                                            {itemMedias.map((media) => (
+                                            {itemMedias.map((media: any) => (
                                               <div
                                                 key={media.id}
                                                 className="relative inline-block group"
@@ -2945,7 +3068,7 @@ export default function Home() {
           <div className="space-y-3 pt-2">
             <h3 className="font-bold text-xs text-gray-800">📦 現在ストック・予約中のお題 ({stockPrompts.length}件)</h3>
             <div className="space-y-2">
-              {stockPrompts.map((st, i) => (
+              {stockPrompts.map((st: any, i: number) => (
                 <div key={i} className="p-3 border rounded-lg bg-gray-50 flex justify-between items-center text-xs">
                   <div>
                     <span className="font-bold text-indigo-900">{st.title}</span> 
@@ -2967,7 +3090,7 @@ export default function Home() {
               <p className="text-gray-500 text-sm py-4 text-center">まだ提出履歴がありません。</p>
             ) : (
               <div className="space-y-4">
-                {allSendHistory.map((historyItem, idx) => (
+                {allSendHistory.map((historyItem: any, idx: number) => (
                   <div key={idx} className="border p-4 rounded-xl bg-gray-50/50 space-y-3 shadow-xs">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b pb-2">
                       <div>
@@ -3109,7 +3232,7 @@ export default function Home() {
                   {stockPrompts.length === 0 ? (
                     <p className="text-xs text-gray-400 py-4 text-center">ストックされた課題はありません。</p>
                   ) : (
-                    stockPrompts.map((st, i) => (
+                    stockPrompts.map((st: any, i: number) => (
                       <div key={i} onClick={() => { 
                         if (st.target_type === 'masochist') {
                           if (!masochistUnlocked) {
@@ -3144,7 +3267,7 @@ export default function Home() {
                   {pastPrompts.length === 0 ? (
                     <p className="text-xs text-gray-400 py-4 text-center">過去に保持された課題はありません。</p>
                   ) : (
-                    pastPrompts.map((past, i) => (
+                    pastPrompts.map((past: any, i: number) => (
                       <div key={i} onClick={() => { setPrompt(past); setSelectedPromptTab('normal'); }} className="p-3 border rounded-lg bg-gray-50 hover:bg-indigo-50/50 cursor-pointer transition">
                         <div className="flex justify-between items-center">
                           <h4 className="font-bold text-xs text-indigo-900">{past.title}</h4>
@@ -3202,9 +3325,9 @@ export default function Home() {
             <h2 className="text-lg font-bold text-gray-900">カテゴリ別ボトルシート一覧（スワイプ対応）</h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {parentCategories.map((parent) => {
+              {parentCategories.map((parent: any) => {
                 const subCats = getSubCategories(parent.id)
-                const allChildItems = subCats.flatMap((sub) => getChildItems(sub.id))
+                const allChildItems = subCats.flatMap((sub: any) => getChildItems(sub.id))
                 
                 const ITEMS_PER_PAGE = 35
                 const totalPages = Math.max(1, Math.ceil(allChildItems.length / ITEMS_PER_PAGE))
@@ -3289,7 +3412,7 @@ export default function Home() {
                       </div>
 
                       <div className="grid grid-cols-7 gap-2.5 pt-1">
-                        {gridItems.map((item, index) => {
+                        {gridItems.map((item: any, index: number) => {
                           const itemChecks = item ? checks[item.id] || [] : []
                           const orderedStatuses = ['interested', 'favorite_play', 'experienced', 'favorite', 'owned']
                           const activeSelectedStatuses = orderedStatuses.filter((s) => itemChecks.includes(s))
@@ -3330,7 +3453,7 @@ export default function Home() {
                     {totalPages > 1 && (
                       <div className="flex justify-between items-center px-1 pt-1 text-xs">
                         <button
-                          onClick={() => setCategoryPages((prev) => ({ ...prev, [parent.id]: Math.max(0, safePage - 1) }))}
+                          onClick={() => setCategoryPages((prev: any) => ({ ...prev, [parent.id]: Math.max(0, safePage - 1) }))}
                           disabled={safePage === 0}
                           className="px-3 py-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 rounded font-bold text-gray-700"
                         >
@@ -3340,7 +3463,7 @@ export default function Home() {
                           {safePage + 1} / {totalPages} ページ（スワイプ切替可）
                         </span>
                         <button
-                          onClick={() => setCategoryPages((prev) => ({ ...prev, [parent.id]: Math.min(totalPages - 1, safePage + 1) }))}
+                          onClick={() => setCategoryPages((prev: any) => ({ ...prev, [parent.id]: Math.min(totalPages - 1, safePage + 1) }))}
                           disabled={safePage === totalPages - 1}
                           className="px-3 py-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 rounded font-bold text-gray-700"
                         >
