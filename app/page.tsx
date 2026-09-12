@@ -46,12 +46,12 @@ const INITIAL_CATEGORIES = [
 ]
 
 const CUSTOM_FIELD_CONFIGS = [
-  { id: 'field_1', label: 'カスタム項目 1（テキスト）', type: 'text' },
+  { id: 'field_1', label: '氏名', type: 'text' },
   { id: 'field_birthdate', label: '生年月日', type: 'date' },
   { id: 'field_sns', label: 'SNSアカウント', type: 'text', placeholder: '@username または URL' },
   { id: 'field_email', label: 'メールアドレス', type: 'email', placeholder: 'example@domain.com' },
   { id: 'field_tel', label: '電話番号', type: 'tel', placeholder: '090-0000-0000' },
-  { id: 'field_address', label: '住所（自由入力）', type: 'textarea', placeholder: '任意の住所や架空の住所を入力できます' },
+  { id: 'field_address', label: '住所（自由入力）', type: 'textarea', placeholder: 'あなたの住所を入力してください' },
 
   { id: 'male_chin_length', label: 'チン長', type: 'text', placeholder: '例: 15cm', condition: { field: 'field_gender', value: '男性' } },
   { id: 'male_chin_girth', label: 'チン太', type: 'text', placeholder: '例: 12cm', condition: { field: 'field_gender', value: '男性' } },
